@@ -2,11 +2,20 @@
 
 import argparse
 import logging
+import signal
 import sys
 from pathlib import Path
 
 from config import Config
-from simconnect import SimConnect
+
+SHOULD_QUIT = False
+
+
+def _signal_handler(signum: signal.Signals, frame: any) -> None:
+    """Signal handler to quit the application."""
+    global SHOULD_QUIT  # noqa: PLW0603 (global-statement)
+    logging.info("Received signal %d, quitting...", signum)
+    SHOULD_QUIT = True
 
 
 def _parse_args(raw_args: list[str]) -> argparse.Namespace:
@@ -52,6 +61,7 @@ def main(raw_args: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, _signal_handler)
     logging.basicConfig(
         level=logging.INFO,
         format="<SimTestPro> %(asctime)s - %(levelname)s: %(message)s",
