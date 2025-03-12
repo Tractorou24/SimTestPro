@@ -8,7 +8,7 @@ license = "GNU GPLv3"
 authors = [{ name = "Fabian INGREMEAU" }]
 maintainers = [{ name = "Fabian INGREMEAU" }]
 keywords = ["simulation", "testing"]
-dependencies = ["simconnect (>=0.4.26,<0.5.0)"]
+dependencies = ["simconnect (>=0.4.26,<0.5.0)", "matplotlib (>=3.10.1,<4.0.0)"]
 
 [project.urls]
 homepage = "https://github.com/Tractorou24/SimTestPro"
