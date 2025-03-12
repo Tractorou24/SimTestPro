@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from config import Config
+from simconnect import SimConnect
 
 
 def _parse_args(raw_args: list[str]) -> argparse.Namespace:
@@ -42,6 +43,11 @@ def main(raw_args: list[str]) -> int:
     config = Config(args.config_file)
     if config is None:
         return 1
+
+    simconnect = SimConnect(
+        config.get(["sim", "delay"]),
+        config.get(["sim", "timeout"]),
+    )
     return 0
 
 
