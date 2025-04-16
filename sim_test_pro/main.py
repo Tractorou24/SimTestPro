@@ -1,21 +1,24 @@
 """A report generator to prove your simulator is up to standards."""
 
 import argparse
+import asyncio
+import datetime
 import logging
 import signal
 import sys
 from pathlib import Path
 
 from config import Config
+from recorder import Recorder
+from simconnect import SimConnect
 
-SHOULD_QUIT = False
+QUIT_EVENT = asyncio.Event()
 
 
 def _signal_handler(signum: signal.Signals, frame: any) -> None:
     """Signal handler to quit the application."""
-    global SHOULD_QUIT  # noqa: PLW0603 (global-statement)
     logging.info("Received signal %d, quitting...", signum)
-    SHOULD_QUIT = True
+    QUIT_EVENT.set()
 
 
 def _parse_args(raw_args: list[str]) -> argparse.Namespace:
@@ -46,7 +49,7 @@ def _parse_args(raw_args: list[str]) -> argparse.Namespace:
     return parser.parse_args(raw_args)
 
 
-def main(raw_args: list[str]) -> int:
+async def main(raw_args: list[str]) -> int:
     """Run the application."""
     args = _parse_args(raw_args)
     config = Config(args.config_file)
@@ -57,6 +60,21 @@ def main(raw_args: list[str]) -> int:
         config.get(["sim", "delay"]),
         config.get(["sim", "timeout"]),
     )
+
+    # Get simvars to listen to
+    graphs = config.get(["graphs"])
+    if graphs is None:
+        logging.error("No graphs found in the configuration file")
+        return 1
+
+    # Create the recorder & record
+    recorder = Recorder(simconnect)
+    recorder.record_from_config(graphs)
+
+    logging.info("Press Ctrl+C to stop recording.")
+    task = recorder.start(datetime.timedelta(seconds=config.get(["sim", "delay"])), QUIT_EVENT)
+    await QUIT_EVENT.wait()
+    await task
     return 0
 
 
@@ -66,4 +84,4 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="<SimTestPro> %(asctime)s - %(levelname)s: %(message)s",
     )
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(asyncio.run(main(sys.argv[1:])))
