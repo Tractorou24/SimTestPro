@@ -6,7 +6,7 @@ import logging
 import SimConnect as RawSimConnect
 
 
-class SimVar(enum.StrEnum):
+class SimVarValue(enum.StrEnum):
     """A value we can request/set from/on the simulator."""
 
     ACCELERATION_BODY_X = "ACCELERATION_BODY_X"
@@ -1340,6 +1340,25 @@ class SimVar(enum.StrEnum):
     ZERO_LIFT_ALPHA = "ZERO_LIFT_ALPHA"
 
 
+class SimVar:
+    """A SimVar object representing a simulator variable."""
+
+    def __init__(self, value: SimVarValue, index: int | None) -> None:
+        """Initialize the SimVar object.
+
+        Args:
+            value (SimVarValue): Which simulator variable to represent.
+            index (int | None): The index of the variable, if applicable. (e.g for multiple engines)
+
+        """
+        self.value = value
+        self.index = index
+
+    def __str__(self) -> str:
+        """Return the string representation of the SimVar."""
+        return f"{self.value}:{self.index}" if self.index else str(self.value)
+
+
 class SimConnect:
     """A SimConnect client for getting values."""
 
@@ -1363,11 +1382,16 @@ class SimConnect:
 
     def get_single(self, value: SimVar) -> str:
         """Get a single value from the simulator."""
-        value = self._requests.get(str(value))
-        if value is None:
-            msg = f"Failed to get value for {value}."
+        if value.index is not None:
+            data = self._requests.find(str(value))
+            if data is not None:
+                data.setIndex(value.index)
+
+        result = self._requests.get(str(value))
+        if result is None:
+            msg = f"Failed to get value for {value!s}."
             raise ValueError(msg)
-        return value
+        return result
 
     def get_multiple(self, values: list[SimVar]) -> dict[SimVar, str]:
         """Get multiple values from the simulator."""
