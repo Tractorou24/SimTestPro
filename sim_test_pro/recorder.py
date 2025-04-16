@@ -88,10 +88,14 @@ class Recorder:
         try:
             logging.info("Recording flight data with %d variables.", len(self._recorded_vars))
             while not self._stop_event.is_set():
-                # Record time
-                self._recorded_time.append(time.time() - self._start_time)
                 # Record variables
-                data = self._simconnect.get_multiple(self._recorded_vars)
+                data = []
+                try:
+                    data = self._simconnect.get_multiple(self._recorded_vars)
+                except Exception:
+                    logging.exception("Error while recording data, skipping frame.")
+                    continue
+
                 for var in data:
                     if self._is_in_recorded_values(var):
                         recorded_values = next(value[1] for value in self._recorded_values if value[0] == var)  # Find the values list for var
@@ -99,9 +103,11 @@ class Recorder:
                     else:
                         self._recorded_values.append((var, [data[var]]))
 
-                # Wait for next iteration or until stop is requested
-                with suppress(TimeoutError):
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=delay.total_seconds())
+                # Record time
+                self._recorded_time.append(time.time() - self._start_time)
+
+                # Wait for next iteration
+                await asyncio.sleep(delay.total_seconds())
         finally:
             logging.info("Recording stopped. It lasted %.2f seconds.", self._recorded_time[-1])
             self._recording = False

@@ -1,0 +1,14 @@
+{
+    "graphs": [
+        {
+            "name": "IAS / TIME",
+            "x": "TIME",
+            "y": [
+                {
+                    "name": "GENERAL_ENG_RPM",
+                    "index": 1
+                }
+            ]
+        }
+    ]
+}

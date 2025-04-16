@@ -8,6 +8,7 @@ import signal
 import sys
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 from config import Config
 from recorder import Recorder
 from simconnect import SimConnect
@@ -72,9 +73,43 @@ async def main(raw_args: list[str]) -> int:
     recorder.record_from_config(graphs)
 
     logging.info("Press Ctrl+C to stop recording.")
-    task = recorder.start(datetime.timedelta(seconds=config.get(["sim", "delay"])), QUIT_EVENT)
+    task = recorder.start(datetime.timedelta(milliseconds=config.get(["sim", "delay"])), QUIT_EVENT)
     await QUIT_EVENT.wait()
     await task
+
+    # Plot the values
+    values, times = recorder.get_results()
+    logging.info("Simulation stopped, generating the report.")
+    for graph in graphs:
+        x_data = []
+        y_data = []
+        for axis in ["x", "y"]:
+            value = graph[axis]
+            if value == "TIME":
+                if axis == "x":
+                    x_data = times
+            else:
+                for var, data in values:
+                    for pair in value:
+                        if isinstance(pair, str):
+                            if var.value == pair:
+                                if axis == "x":
+                                    x_data = data
+                                else:
+                                    y_data = data
+                        elif isinstance(pair, dict) and var.value == pair["name"]:
+                            if axis == "x":
+                                x_data = data
+                            else:
+                                y_data = data
+        # Plot the graph
+        logging.info("Plotting graph %s", graph["name"])
+        plt.title(graph["name"])
+        plt.plot(x_data, y_data)
+        plt.xlabel(graph["x"])
+        plt.ylabel(graph["y"])
+        plt.savefig(args.output_file)
+        plt.show()
     return 0
 
 
